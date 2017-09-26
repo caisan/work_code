@@ -225,24 +225,12 @@ int is_same_conf(list<string> whitelist, list<string> blacklist)
     else if (result.size() > 0)
         return 1;//intersection;
 }
-bool if_match_referer(string http_header_referer, list<string> referer)
+int wildcard_intersection(list<string> whitelist, list<string> blacklist)
 {
-    const char* patterns[] = {"http://","https://", NULL};
-    const char* const url = http_header_referer.c_str();
-    char* domain = (char*)malloc(sizeof(char)*MAX_REFERER_DOMAIN_LENGTH);
-    int j=0; 
-    size_t start = 0; 
-    for(int i=0; patterns[i]; i++) 
-    {    
-        if( strncmp( url, patterns[i], strlen( patterns[i] ) ) == 0 )
-        {
-            start = strlen(patterns[i]);
-        }
-    }    
-    for(int i=start;url[i]!='/'&&url[i]!='\0';i++,j++)
-        domain[j] = url[i];
-    domain[j] = '\0';
-    const char* match_domain = domain;
+
+}
+bool if_match_referer(const char*match_domain, list<string> referer)
+{
     bool match_result[referer.size()];
     memset(match_result, 0, referer.size()*sizeof(bool));
     unsigned long i =0;
@@ -271,14 +259,33 @@ bool if_match_referer(string http_header_referer, list<string> referer)
             return true;
     }
 }
-
+const char* get_domain(string http_header_referer)
+{
+    const char* patterns[] = {"http://","https://", NULL};
+    const char* const url = http_header_referer.c_str();
+    char* domain = (char*)malloc(sizeof(char)*MAX_REFERER_DOMAIN_LENGTH);
+    int j=0;
+    size_t start = 0;
+    for(int i=0; patterns[i]; i++)
+    {
+        if( strncmp( url, patterns[i], strlen( patterns[i]  )  ) == 0  )
+            start = strlen(patterns[i]);
+    }
+    for(int i=start;url[i]!='/'&&url[i]!='\0';i++,j++)
+        domain[j] = url[i];
+    domain[j] = '\0';
+    const char* match_domain = domain;
+    return domain;
+}
 int verify_referer(string header_referer, list<string> b_list, list<string> w_list)
 {    
     bool in_white_list, in_black_list;
+    list<string>::iterator iter;
+    const char* domain = get_domain(header_referer);
     list<string> black_list = b_list;
     list<string> white_list = w_list;
-    in_white_list = if_match_referer( header_referer, white_list  );
-    in_black_list = if_match_referer( header_referer, black_list  );
+    in_white_list = if_match_referer( domain, white_list  );
+    in_black_list = if_match_referer( domain, black_list  );
     /*if whitelist and blacklist are same*/
     if (is_same_conf(white_list, black_list) > 0) 
     {    
@@ -298,6 +305,14 @@ int verify_referer(string header_referer, list<string> b_list, list<string> w_li
         {
             cout<<"----> Not in_white_list, in black_list"<<endl;
             return -1;
+        }
+        else if(in_white_list && in_black_list)
+        {
+            iter = find(black_list.begin(), black_list.end(), domain);
+            if (iter!=black_list.end())
+                return -1;
+            else
+                return 0;
         }
     }    
     if (!white_list.empty() && black_list.empty())
@@ -328,11 +343,11 @@ int main()
     list<string> blist = {"www.baidu.com"};
     */
     
-    list<string> wlist = {"www.baidu.*"};
-    list<string> blist = {"www.baidu.com"};
+    list<string> wlist = {"www.baidu.com", "www.eayun.*"};
+    list<string> blist = {"www.baidu.*"};
     
 
-    string referer = "http://www.baidu.com";
+    string referer = "http://www.eayun.com";
     /*
      * -1;deny
      *  0:allow
